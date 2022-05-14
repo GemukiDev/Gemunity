@@ -1,4 +1,11 @@
-# Gemunity (v0.1)
+# Gemunity (v0.2)
+
+## Novedades en la versión v0.2
+
+- Se ha añadido el componente `RectangleRenderer` que sirve para pintar rectángulos de colores sin necesidad de cargar sprites.
+- Se ha añadido la clase `Matrix` para trabajar con matrices bidimensionales.
+- Se ha añadido el método `FixedUpdate` a los objetos que extienden `MonoBehaviour` y la propiedad `fixedDeltaTime` a la clase estática `Time`.
+
 ## Introducción
 
 Gemunity es un motor de videojuegos 2D escrito en JavaScript para ejecutarse en navegadores.

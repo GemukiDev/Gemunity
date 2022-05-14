@@ -1,26 +1,27 @@
-import { Time } from "./Time.js";
 import { Camera } from "./Render/Camera.js";
 import { Renderer } from "./Render/Renderer.js";
 import { Input } from "./Input/Input.js";
 import { Collider2D } from "./Physics/Collider2D.js";
 import { CollisionManager } from "./Physics/CollisionManager.js";
-import { Config } from "./Config.js";
 export class Game {
     constructor(gameObjects, testing = false) {
-        this.lastCollisionCheck = 0;
-        Input.Init();
         this.testing = testing;
         this.gameObjects = gameObjects;
+    }
+    Init() {
+        Input.Init();
+        this.FindCamera();
         this.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 component.Awake();
             });
         });
-        this.FindCamera();
     }
-    Tick() {
+    Tick(runPhysics) {
         this.RunStarts();
-        if (this.ShouldCheckCollisions())
+        if (runPhysics)
+            this.RunFixedUpdates();
+        if (runPhysics)
             this.RunCollisionCheck();
         this.RunUpdates();
         this.RunUpdateCoroutines();
@@ -29,7 +30,7 @@ export class Game {
     }
     RunStarts() {
         this.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 if (!component.started) {
                     component.Start();
                     component._CheckStart();
@@ -37,13 +38,10 @@ export class Game {
             });
         });
     }
-    ShouldCheckCollisions() {
-        return Time.time - this.lastCollisionCheck >= Config.collisionDetectionFrequency;
-    }
     RunCollisionCheck() {
         const colliders = [];
         this.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 if (component instanceof Collider2D) {
                     colliders.push(component);
                 }
@@ -57,18 +55,24 @@ export class Game {
             });
             testedColliders.push(col1);
         });
-        this.lastCollisionCheck = Time.time;
+    }
+    RunFixedUpdates() {
+        this.gameObjects.forEach(go => {
+            go.GetAllComponents().forEach(component => {
+                component.FixedUpdate();
+            });
+        });
     }
     RunUpdates() {
         this.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 component.Update();
             });
         });
     }
     RunUpdateCoroutines() {
         this.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 component._RunUpdateCoroutines();
             });
         });
@@ -76,7 +80,7 @@ export class Game {
     RunDestroys() {
         this.gameObjects.forEach(go => {
             if (go.destroyed) {
-                go.GetComponents().forEach(component => {
+                go.GetAllComponents().forEach(component => {
                     component.OnDestroy();
                 });
             }
@@ -91,7 +95,7 @@ export class Game {
             const renderers = Game.FindObjectsOfType(Renderer);
             renderers.sort(this.RendererComparer).forEach(renderer => renderer.Draw(Camera.main));
             if (this.testing) {
-                this.gameObjects.forEach(go => go.GetComponents().forEach(c => {
+                this.gameObjects.forEach(go => go.GetAllComponents().forEach(c => {
                     c.DrawGizmo(Camera.main);
                 }));
             }
@@ -120,9 +124,9 @@ export class Game {
         const components = [];
         let comp;
         this.game.gameObjects.forEach(go => {
-            comp = go.GetComponent(typeRef);
+            comp = go.GetComponents(typeRef);
             if (comp)
-                components.push(comp);
+                components.push(...comp);
         });
         return components;
     }
@@ -140,19 +144,20 @@ export class Game {
         if (this.game)
             Game.DestroyGame();
         this.game = new Game(gameObjects, testing);
+        this.game.Init();
     }
     static DestroyGame() {
         this.game.gameObjects.forEach(go => {
-            go.GetComponents().forEach(component => {
+            go.GetAllComponents().forEach(component => {
                 component.OnDestroy();
             });
         });
     }
     static Instantiate(gameObject) {
         if (!this.game)
-            return;
+            throw new Error("Game not yet created");
         this.game.gameObjects.push(gameObject);
-        gameObject.GetComponents().forEach(component => {
+        gameObject.GetAllComponents().forEach(component => {
             component.Awake();
         });
         return gameObject;

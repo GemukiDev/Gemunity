@@ -1,3 +1,4 @@
+import { Config } from "./Config.js";
 import { Game } from "./Core.js";
 import { EventEmitter } from "./EventEmiter.js";
 import { Input } from "./Input/Input.js";
@@ -49,17 +50,26 @@ export class Gemunity {
         this.ShowLogo(300, 300);
         Time.time = new Date().valueOf() / 1000;
         Time.deltaTime = 0;
+        Time.fixedDeltaTime = 0;
         requestAnimationFrame(Gemunity.Tick);
     }
     static Tick() {
         const oldTime = Time.time;
         Time.time = new Date().valueOf() / 1000;
         Time.deltaTime = Time.time - oldTime;
+        const runPhysics = Gemunity.ShouldRunPhysics();
+        if (runPhysics) {
+            Time.fixedDeltaTime = Time.time - Gemunity.lastPhysicsRun;
+            Gemunity.lastPhysicsRun = Time.time;
+        }
         if (Game.game) {
-            Game.game.Tick();
+            Game.game.Tick(runPhysics);
         }
         Input.Tick();
         requestAnimationFrame(Gemunity.Tick);
+    }
+    static ShouldRunPhysics() {
+        return Time.time - Gemunity.lastPhysicsRun >= 1 / Config.fixedUpdatesPerSecond;
     }
     static ShowLogo(width, height) {
         const smallCanvas = document.createElement("canvas");
@@ -98,3 +108,4 @@ export class Gemunity {
     }
 }
 Gemunity.playBtnEvent = new EventEmitter();
+Gemunity.lastPhysicsRun = 0;
